@@ -1,0 +1,18 @@
+### TOURNAMENT SCRIPT ###
+
+## A. Preparation ##
+0. Make sure all the files are on the same directory:
+	tournament.py tournament.sql tournament_test.py
+
+## A. Creating the Database ##
+1. SSH to Vagrant
+2. Go to the folder where tournament.sql is placed
+3. type psql to go into psql
+4. Run the query by typing: \i tournament.sql
+
+## B. Running the tests
+5. Quit psql and go back to Vagrant by typing \q
+6. Run the tests by typing python tournament_test.py 
+
+## Additional Comments ##
+All the functions are inside tournament.py file

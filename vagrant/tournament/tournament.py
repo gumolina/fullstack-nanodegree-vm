@@ -2,8 +2,26 @@
 # 
 # tournament.py -- implementation of a Swiss-system tournament
 #
-
+"Import needed libraries"
 import psycopg2
+import contextlib
+
+@contextlib.contextmanager
+def get_cursor():
+    """ Connect to database and set the cursor. 
+    After the with get_cursor is finished, commit and close the connection """
+    conn = connect()
+    cur = conn.cursor()
+    try:
+        yield cur
+    except:
+        raise
+    else:
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
 
 
 def connect():
@@ -13,27 +31,19 @@ def connect():
 
 def deleteMatches():
     """Remove all the match records from the database."""
-    conn = connect()
-    c = conn.cursor()
-    c.execute("DELETE FROM matches")
-    conn.commit()
-    conn.close()
+    with get_cursor() as cursor:
+        cursor.execute("DELETE FROM matches;")
 
 def deletePlayers():
     """Remove all the player records from the database."""
-    conn = connect()
-    c = conn.cursor()
-    c.execute("DELETE FROM players")
-    conn.commit()
-    conn.close()
+    with get_cursor() as cursor:
+        cursor.execute("DELETE FROM players")
 
 def countPlayers():
     """Returns the number of players currently registered."""
-    conn = connect()
-    c = conn.cursor()
-    c.execute("select count(*) from players")
-    result = c.fetchone()
-    conn.close()
+    with get_cursor() as cursor:
+        cursor.execute("select count(*) from players")
+        result = cursor.fetchone()
     return result[0]
 
 def registerPlayer(name):
@@ -45,12 +55,9 @@ def registerPlayer(name):
     Args:
       name: the player's full name (need not be unique).
     """
-    conn = connect()
-    c = conn.cursor()
-    c.execute("INSERT INTO players(name) VALUES (%s);",[name])
-    conn.commit()
-    conn.close()
-
+    with get_cursor() as cursor:
+        cursor.execute("INSERT INTO players(name) VALUES (%s);",[name])
+    
 def playerStandings():
     """Returns a list of the players and their win records, sorted by wins.
 
@@ -64,11 +71,9 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
-    conn = connect()
-    c = conn.cursor()
-    c.execute("select player_id, player_name, wins, wins+losses as matches from rank")
-    result = c.fetchall()
-    conn.close()
+    with get_cursor() as cursor:
+        cursor.execute("select player_id, player_name, wins, wins+losses as matches from rank")
+        result = cursor.fetchall()
     return result
 
 def reportMatch(winner, loser):
@@ -78,12 +83,9 @@ def reportMatch(winner, loser):
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
-    conn = connect()
-    c = conn.cursor()
-    c.execute("INSERT INTO matches(winner_id,loser_id) VALUES (%s,%s);",[winner,loser])
-    conn.commit()
-    conn.close()
- 
+    with get_cursor() as cursor:
+        cursor.execute("INSERT INTO matches(winner_id,loser_id) VALUES (%s,%s);",[winner,loser])
+    
 def swissPairings():
     """Returns a list of pairs of players for the next round of a match.
   
@@ -99,21 +101,29 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
-    conn = connect()
-    c = conn.cursor()
-    c.execute("select player_id, player_name from rank")
-    rows = c.fetchall()
-    conn.close()
 
+    "Fetch all players per rank (victories)"
+    with get_cursor() as cursor:
+        cursor.execute("select player_id, player_name from rank")
+        rows = cursor.fetchall()
+    
+    "Create an empty list"    
     result = []
 
+    "Repeat while the number of players fetched in the query is still >0"
     while rows:
+        """Add auxiliary number (in the future, it would be easier to check whether the match already happened,
+            if so, we can fetch the next player"""
         aux = 1
+        """ Set 1st player of the match as the top on the rank (row 0)"""
         player1 = rows[0]
+        """ Set the 2nd player of the match as the 2nd on the rank (row aux = 1)"""
         player2 = rows[aux]
+        """ After players are set, we can delete those entries from the list"""
         del rows[aux]
         del rows[0]
+        """ Finally, insert the match to the result list"""
         result.append(player1 + player2)
         
-        
+    """ Return the all the final matches"""   
     return result

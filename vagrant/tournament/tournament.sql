@@ -17,8 +17,8 @@ CREATE TABLE players (
 
 CREATE TABLE matches (
    ID  SERIAL PRIMARY KEY,
-   winner_id int,
-   loser_id int
+   winner_id int references players(id),
+   loser_id int references players(id)
    );
 
 CREATE VIEW rank AS 
